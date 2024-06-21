@@ -7,6 +7,9 @@ import connectDB from './db/database.js'
 
 const port = process.env.PORT || 8000;
 
+
+//NOTE - here we have written the database connection into a async await fashion code cause we all know that datbase is an outer connection method that is why there is a chance of getting error in connection, and when the connection establish async await returns a promise so we have to resolve it with .then and .catch wrap to use it properly.It is a very common practice.
+
 connectDB()
     .then(() => {
         app.on('error', (error) => {
