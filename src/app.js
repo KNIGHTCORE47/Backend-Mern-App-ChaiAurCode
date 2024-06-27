@@ -22,4 +22,20 @@ app.use(express.static("public"))
 //NOTE - to accept cookies from user and store that data on the user browser securely and use it to perform CRUD operation.
 app.use(cookieParser())
 
+
+
+
+
+
+//NOTE - import routes
+
+import userRouter from './routes/user.routes.js'
+
+//NOTE - routes declaration => here we can not use app.get() method cause we have seperated the routes from the app.js, that is why here we have to use a middleware to get access of the routes. Here wewill use app.use() method to access the routes.
+
+app.use("/api/v1/users", userRouter)
+
+//OUTCOME as - http://localhost:8000/api/v1/users/register
+
+
 export { app } 
