@@ -22,11 +22,14 @@ const uploadOnClourinary = async function (localFilePath) {
                     resource_type: "auto",
                 })
         console.log("File has been uploaded on cloudinary successfully!!", response.url);
+        console.log("cloudinary upload response is - ", response);
         return response;
-    } catch (error) {
-        //NOTE - Remove the locally saved temporaty file sa the upload operation got failed
+    }
+    catch (error) {
+        //NOTE - Remove the locally saved temporaty file as the upload operation got failed
         fs.unlinkSync(localFilePath)
+        return null;
     }
 }
 
-export {uploadOnClourinary};
+export { uploadOnClourinary };

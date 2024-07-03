@@ -66,7 +66,7 @@ userSchema.pre("save", async function (next) {
 })
 
 
-//NOTE - To prevent user from using the same password or reenter the password to compare and save...
+//NOTE - To prevent user from using the same password or re-enter the password to compare and save...
 userSchema.methods.isPasswordCorrect = async function (password) {
     return await bcrypt.compare(password, this.password)
 }
@@ -75,18 +75,18 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 //NOTE - here we have use the both sessions and cookies altogaher. That is why we use both access and referesh tokens and save only the referesh tokens to the database.
 
 userSchema.methods.generateAccessToken = function () {
-   return jwt.sign(
-    {
-        _id: this._id,
-        email: this.email,
-        username: this.username,
-        fullName: this.fullName,
-    },
-    process.env.ACCESS_TOKEN_SECRET,
-    {
-        expiresIn: process.env.ACCESS_TOKEN_EXPIRY
-    }
-   )
+    return jwt.sign(
+        {
+            _id: this._id,
+            email: this.email,
+            username: this.username,
+            fullName: this.fullName,
+        },
+        process.env.ACCESS_TOKEN_SECRET,
+        {
+            expiresIn: process.env.ACCESS_TOKEN_EXPIRY
+        }
+    )
 }
 
 userSchema.methods.generateRefreshToken = function () {
@@ -98,7 +98,7 @@ userSchema.methods.generateRefreshToken = function () {
         {
             expiresIn: process.env.REFRESH_TOKEN_EXPIRY
         }
-       )
+    )
 }
 
 export const User = mongoose.model("User", userSchema) 
