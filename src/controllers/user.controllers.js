@@ -20,6 +20,8 @@ const registerUser = asyncHandler(
 
         // NOTE - here we can not directly handle files but data
         // NOTE - to hanlde files we have to use routes and middlewares
+
+        
         const { username, email, fullName, password } = req.body
         console.log("email: ", email);
 
