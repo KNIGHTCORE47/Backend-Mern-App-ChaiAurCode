@@ -21,8 +21,14 @@ const uploadOnClourinary = async function (localFilePath) {
                 {
                     resource_type: "auto",
                 })
+
         console.log("File has been uploaded on cloudinary successfully!!", response.url);
+
+        //NOTE - cloudinary full upload response
         console.log("cloudinary upload response is - ", response);
+
+        fs.unlinkSync(localFilePath)
+
         return response;
     }
     catch (error) {

@@ -2,7 +2,25 @@ import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { User } from '../models/user.models.js'
 import { uploadOnClourinary } from '../utils/cloudinary.js'
-import {ApiResponse} from '../utils/ApiResponse.js'
+import { ApiResponse } from '../utils/ApiResponse.js'
+
+const generateAccessAndRefreshTokens = async function (userId) {
+    try {
+        const user = await User.findById(userId)
+        const accessToken = user.generateAccessToken()
+        const refreshToken = user.generateRefreshToken()
+
+        user.refreshToken = refreshToken
+
+        //NOTE - here if we perform the save method in database the models of mongoose kick in like required the password field too but here we just update the field with one value that is why we use anothere parameter
+        await user.save({ validateBeforeSave: true })
+
+        return { accessToken, refreshToken }
+    }
+    catch (error) {
+        throw new ApiError(500, "Something went wrong while generating access and refresh token")
+    }
+}
 
 const registerUser = asyncHandler(
     async function (req, res) {
@@ -21,9 +39,12 @@ const registerUser = asyncHandler(
         // NOTE - here we can not directly handle files but data
         // NOTE - to hanlde files we have to use routes and middlewares
 
-        
+
         const { username, email, fullName, password } = req.body
         console.log("email: ", email);
+
+        //NOTE - how data fetched into req.body
+        console.log("All the parsed data into body", req.body);
 
         if (
             [username, email, fullName, password].some((field) => field?.trim() === "")
@@ -45,18 +66,31 @@ const registerUser = asyncHandler(
         }
 
         const avatarLocalPath = req.files?.avatar[0]?.path;
-        const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
         if (!avatarLocalPath) {
             throw new ApiError(400, "Avatar image is required")
         }
 
         const avatar = await uploadOnClourinary(avatarLocalPath);
-        const coverImage = await uploadOnClourinary(coverImageLocalPath);
 
         if (!avatar) {
             throw new ApiError(400, "Avatar image is required")
         }
+
+        //NOTE - here we will face a simple javaScript error that is if user forget to upload a coverImge it will give us error of undefined instead of null
+        // const coverImageLocalPath = req.files?.coverImage[0]?.path;
+
+        //NOTE - classic method toresolve this problem
+        let coverImageLocalPath;
+
+        if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
+            coverImageLocalPath = req.files.coverImage[0].path
+        }
+
+        const coverImage = await uploadOnClourinary(coverImageLocalPath);
+
+        //NOTE - how data fetched into req.files
+        console.log("All the parsed files data", req.files || error);
 
         const user = await User.create({
             fullName,
@@ -81,4 +115,99 @@ const registerUser = asyncHandler(
     }
 )
 
-export { registerUser }
+const loginUser = asyncHandler(
+    async function (req, res) {
+        //NOTE - step01 => get data from req body
+        //NOTE - step02 => email or password
+        //NOTE - step03 => find the user
+        //NOTE - step04 => check password(if ok then step05 else throw error)
+        //NOTE - step05 => give access and refresh token
+        //NOTE - step06 => send the tokens by secure cookies and give a success response 
+
+
+
+        const { username, email, password } = req.body
+        console.log("username", username);
+        console.log("email", email);
+        console.log("password", password);
+
+        //NOTE - Check wheather the user send usernme or email
+        if (!(username || email)) {
+            throw new ApiError(400, "username or email is required")
+        }
+
+        const user = await User.findOne({
+            $or: [{ username }, { email }]
+        })
+
+        //NOTE - if there is no existing user found
+        if (!user) {
+            throw new ApiError(404, "User does not exist")
+        }
+
+        //NOTE - if there is a existing user found check password 
+        //NOTE - here we have to use the lowercase user and not the capitalize User cause incase of User it is derived from mongoose, a mongoose object
+        const isPasswordValid = await user.isPasswordCorrect(password)
+
+        if (!isPasswordValid) {
+            throw new ApiError(401, "Invalid user password")
+        }
+
+        const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id)
+
+        //NOTE - OPTIONAL Step(cause it require DB power and more costly)
+
+        const loggedInUser = await User.findById(user._id).select("-password, -refreshToken")
+
+        //NOTE - Method of sending cookies
+        const options = {
+            httpOnly: true,
+            secure: true
+        }
+
+        return res.status(200)
+            .cookie("accessToken", accessToken, options)
+            .cookie("refreshToken", refreshToken, options)
+            .json(
+                new ApiResponse(
+                    200, 
+                    {
+                        user: loggedInUser, accessToken, refreshToken,
+                    },
+                    "User Loggd In Successfully"
+                )
+            )
+    }
+)
+
+const logoutUser = asyncHandler(
+    async function(req, res) {
+        await User.findByIdAndUpdate(
+            req.user._id, 
+            {
+                $set: {
+                    refreshToken: undefined
+                }
+            },
+            {
+                new: true
+            }
+        )
+
+        const options = {
+            httpOnly: true,
+            secure: true
+        }
+
+        return res.status(200)
+            .clearCookie("accessToken", options)
+            .clearCookie("refreshToken", options)
+            .json(new ApiResponse(200, {}, "User logged out"))
+    }
+)
+
+export {
+    registerUser,
+    loginUser,
+    logoutUser
+}
