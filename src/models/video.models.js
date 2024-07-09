@@ -4,7 +4,7 @@ import mongooseAggregatePaginate from 'mongoose-aggregate-paginate-v2'
 const videoSchema = new mongoose.Schema(
     {
         videoFile: {
-            type:String,    //NOTE - cloudinary url
+            type: String,    //NOTE - cloudinary url
             required: true,
         },
         thumbnail: {
@@ -35,11 +35,11 @@ const videoSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "User"
         }
-    }, {timestamps: true}
+    }, { timestamps: true }
 )
 
 //NOTE - Here we have use mongoose aggregation pipeline to get access of mongoDB quarries. One of them is middlewares which help us to write aggregation querries
 
 videoSchema.plugin(mongooseAggregatePaginate)
 
-export const Video= mongoose.model("Video", videoSchema)
+export const Video = mongoose.model("Video", videoSchema)
