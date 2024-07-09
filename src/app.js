@@ -31,7 +31,7 @@ app.use(cookieParser())
 
 import userRouter from './routes/user.routes.js'
 
-//NOTE - routes declaration => here we can not use app.get() method cause we have seperated the routes from the app.js, that is why here we have to use a middleware to get access of the routes. Here wewill use app.use() method to access the routes.
+//NOTE - routes declaration => here we can not use app.get() method cause we have seperated the routes from the app.js, that is why here we have to use a middleware to get access of the routes. Here we will use app.use() method to access the routes.
 
 app.use("/api/v1/users", userRouter)
 

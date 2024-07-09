@@ -3,6 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js'
 import { User } from '../models/user.models.js'
 import { uploadOnClourinary } from '../utils/cloudinary.js'
 import { ApiResponse } from '../utils/ApiResponse.js'
+import jwt from 'jsonwebtoken';
 
 const generateAccessAndRefreshTokens = async function (userId) {
     try {
@@ -145,7 +146,7 @@ const loginUser = asyncHandler(
             throw new ApiError(404, "User does not exist")
         }
 
-        //NOTE - if there is a existing user found check password 
+        //NOTE - if there is a existing user found, check password 
         //NOTE - here we have to use the lowercase user and not the capitalize User cause incase of User it is derived from mongoose, a mongoose object
         const isPasswordValid = await user.isPasswordCorrect(password)
 
@@ -170,9 +171,11 @@ const loginUser = asyncHandler(
             .cookie("refreshToken", refreshToken, options)
             .json(
                 new ApiResponse(
-                    200, 
+                    200,
                     {
-                        user: loggedInUser, accessToken, refreshToken,
+                        user: loggedInUser,
+                        accessToken,
+                        refreshToken,
                     },
                     "User Loggd In Successfully"
                 )
@@ -181,9 +184,9 @@ const loginUser = asyncHandler(
 )
 
 const logoutUser = asyncHandler(
-    async function(req, res) {
+    async function (req, res) {
         await User.findByIdAndUpdate(
-            req.user._id, 
+            req.user._id,
             {
                 $set: {
                     refreshToken: undefined
@@ -206,8 +209,66 @@ const logoutUser = asyncHandler(
     }
 )
 
+/*NOTE - disscuss over => AccessToken and RefreshToken 
+
+Working method - restrict user from give user details like email and password over and over again to access fetures of the web app or website by creating a tokenise method which kept both within the server and user end
+
+AccessToken - it is a short lived token system, after expiry of it user has to re-enter their email and password to refresh that token again.
+
+RefreshToken - it is also known as Session Storge, kept within the server side as well as user side. Suppose in the user end the accessToken invalidates, it will give 401 statusCode message that is the access of the website is expired. In that case at the frontend we can give user an endpoint to hit to refresh the accessToken and receive that new accessToken which will incorporate with a new refereshToken. As we all know that refereshToken is also saved within the server side as well so in backend both user side and server side refereshToken will be compaired and if matched the sessions starts again which is similar to login. At that time emptied cookies will be filled with accessToken as well as a new refreshToken too.
+*/
+
+const refreshAccessToken = asyncHandler(
+    async function (req, res) {
+        const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+
+        if (!incomingRefreshToken) {
+            throw new ApiError(401, "Unauthorized request")
+        }
+
+        try {
+            const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
+
+            const user = await User.findById(decodedToken?._id)
+
+            if (!user) {
+                throw new ApiError(401, "Invalid refresh token")
+            }
+
+            if (incomingRefreshToken !== user?.refreshToken) {
+                throw new ApiError(401, "Refresh token is expired or used")
+            }
+
+            const options = {
+                httpOnly: true,
+                secure: true,
+            }
+
+            const { accessToken, newRefreshToken } = await generateAccessAndRefreshTokens(user._id)
+
+            return res.status(200)
+                .cookie("accessToken", accessToken, options)
+                .cookie("refreshToken", newRefreshToken, options)
+                .json(
+                    new ApiResponse(
+                        200,
+                        {
+                            accessToken,
+                            refreshToken: newRefreshToken,
+
+                        },
+                        "Access Token Refreshed Successfully"
+                    )
+                )
+        } catch (error) {
+            throw new ApiError(401, error?.message || "Invalid refresh token")
+        }
+    }
+)
+
 export {
     registerUser,
     loginUser,
-    logoutUser
+    logoutUser,
+    refreshAccessToken
 }
