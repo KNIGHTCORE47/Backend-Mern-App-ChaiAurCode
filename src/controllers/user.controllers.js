@@ -177,7 +177,7 @@ const loginUser = asyncHandler(
                         accessToken,
                         refreshToken,
                     },
-                    "User Loggd In Successfully"
+                    "User Logged In Successfully"
                 )
             )
     }
