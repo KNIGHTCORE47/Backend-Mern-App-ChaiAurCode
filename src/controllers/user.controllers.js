@@ -81,7 +81,7 @@ const registerUser = asyncHandler(
         //NOTE - here we will face a simple javaScript error that is if user forget to upload a coverImge it will give us error of undefined instead of null
         // const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
-        //NOTE - classic method toresolve this problem
+        //NOTE - classic method to resolve this problem
         let coverImageLocalPath;
 
         if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
@@ -266,9 +266,70 @@ const refreshAccessToken = asyncHandler(
     }
 )
 
+const changeCurrentPassword = asyncHandler(
+    async function (req, res) {
+        const { oldPassword, newPassword, confirmPassword } = req.body
+
+        const user = await User.findById(req.user?._id)
+
+        const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+
+        if (!isPasswordCorrect) {
+            throw new ApiError(400, "Invlid password")
+        }
+
+        if (newPassword !== confirmPassword && confirmPassword == "") {
+            throw new ApiError(400, "Password must be same")
+
+        }
+
+        user.password = newPassword     //NOTE - only set the value
+        await user.save({ validateBeforeSave: false })     //NOTE - completely save the value
+
+        return res.status(200)
+            .json(new ApiResponse(200, {}, "Password changed successfully"))
+
+    }
+)
+
+const getCurrentUser = asyncHandler(
+    function (req, res) {
+        return res.status(200)
+            .json(200, req.user, "Current user fetched successfully")
+    }
+)
+
+const updateAccountDetails = asyncHandler(
+    async function (req, res) {
+
+        const { fullName, email } = req.body
+
+        if (!(fullName || email)) {
+            throw new ApiError(400, "All fields are required")
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.user?._id,
+            {
+                $set: {
+                    fullName: fullName,
+                    email: email
+                }
+            },
+            { new: true }
+        ).select("-password")
+
+        return res.status(200)
+        .json(new ApiResponse(200, user, "Account details updated successfully"))
+    }
+)
+
 export {
     registerUser,
     loginUser,
     logoutUser,
-    refreshAccessToken
+    refreshAccessToken,
+    changeCurrentPassword,
+    getCurrentUser,
+    updateAccountDetails
 }
