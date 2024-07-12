@@ -403,6 +403,59 @@ const getUserChannelProfile = asyncHandler(
     }
 )
 
+const getWatchHistory = asyncHandler(
+    async function (req, res) {
+        //req.user._id    //NOTE - interview question => In mongoDB we will get _id value as a string and not mongoDB _id, behind the sceane the mongoose is responsible to convert this sting value into the mongoDB _id so that we can perform the methods like - findById, findByOne etc.
+
+        //NOTE - Mongodb aggrigation pipeline does not dependent over mongoose to work so incase we have to use the mongoDB aggrigation pipeline we have to convert the _id string value through mongoose objectId and can not directly propagate req.user._id to the value.
+
+        const user = await User.aggregate([
+            {
+                $match: {
+                    _id: new monooge.Types.ObjectId(req.user._id)
+                }
+            },
+            {
+                $lookup:{
+                    from: "videos",
+                    localField: "watchHistory",
+                    foreignField: "_id",
+                    as: "watchHistory",
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "owner",
+                                foreignField: "_id",
+                                as: "owner", 
+                                pipeline: [
+                                    {
+                                        $project: {
+                                            fullName: 1,
+                                            username: 1,
+                                            avatar: 1
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            $addFields: {
+                                owner: {
+                                    $first: "$owner"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ])
+
+        return res.status(200)
+        .json(new ApiResponse(200, user[0].watchHistory, "Watch history fetched successfully"))
+    }
+)
+
 export {
     registerUser,
     loginUser,
@@ -411,5 +464,6 @@ export {
     changeCurrentPassword,
     getCurrentUser,
     updateAccountDetails,
-    getUserChannelProfile
+    getUserChannelProfile,
+    getWatchHistory
 }
