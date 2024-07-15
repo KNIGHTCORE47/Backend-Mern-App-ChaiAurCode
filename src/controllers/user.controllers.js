@@ -4,6 +4,7 @@ import { User } from '../models/user.models.js'
 import { uploadOnClourinary } from '../utils/cloudinary.js'
 import { ApiResponse } from '../utils/ApiResponse.js'
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 
 const generateAccessAndRefreshTokens = async function (userId) {
     try {
@@ -246,6 +247,8 @@ const refreshAccessToken = asyncHandler(
 
             const { accessToken, newRefreshToken } = await generateAccessAndRefreshTokens(user._id)
 
+            console.log("the whole response is", res);
+
             return res.status(200)
                 .cookie("accessToken", accessToken, options)
                 .cookie("refreshToken", newRefreshToken, options)
@@ -412,7 +415,7 @@ const getWatchHistory = asyncHandler(
         const user = await User.aggregate([
             {
                 $match: {
-                    _id: new monooge.Types.ObjectId(req.user._id)
+                    _id: new mongoose.Types.ObjectId(req.user._id)
                 }
             },
             {
